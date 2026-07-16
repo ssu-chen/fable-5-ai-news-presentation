@@ -1,0 +1,2032 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI新知分享｜Fable 5 設計師實測</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&amp;family=Zen+Old+Mincho:wght@400;600;700&amp;display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #eef0f2;
+      --panel: #fbfaf6;
+      --paper: #fffefa;
+      --grid: rgba(34, 34, 34, 0.055);
+      --ink: #1d1d1b;
+      --muted: #55534d;
+      --soft: #88847a;
+      --line: rgba(29, 29, 27, 0.15);
+      --accent: #e7c9cf;
+      --accent-2: #ded7c6;
+      --accent-3: #c7beb0;
+      --shadow: 0 24px 70px rgba(42, 38, 31, 0.08);
+      --radius: 26px;
+      --radius-sm: 4px;
+      --max: 1360px;
+      --app-height: 100vh;
+      --serif: "Zen Old Mincho", "Hiragino Mincho ProN", "Yu Mincho", serif;
+      --sans: "Zen Kaku Gothic New", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--sans);
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    figure {
+      margin: 0;
+    }
+
+    .deck {
+      position: relative;
+      width: 100vw;
+      height: var(--app-height);
+      overflow: hidden;
+    }
+
+    .slides {
+      display: flex;
+      width: 100%;
+      height: 100%;
+      transition: transform 540ms cubic-bezier(0.22, 1, 0.36, 1);
+      will-change: transform;
+      counter-reset: slide;
+    }
+
+    .slide {
+      width: 100vw;
+      height: var(--app-height);
+      flex: 0 0 100vw;
+      padding: clamp(12px, 2.2vw, 30px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      counter-increment: slide;
+    }
+
+    .frame {
+      width: min(var(--max), calc(100vw - clamp(28px, 4.8vw, 68px)));
+      height: calc(var(--app-height) - clamp(28px, 4.8vw, 68px));
+      position: relative;
+      overflow: hidden;
+      border-radius: var(--radius);
+      border: 1px solid rgba(29, 29, 27, 0.06);
+      background:
+        radial-gradient(circle at 26% 18%, rgba(231, 201, 207, 0.2), transparent 23%),
+        radial-gradient(circle at 76% 76%, rgba(222, 215, 198, 0.38), transparent 24%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(251, 250, 246, 0.94)),
+        var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .frame::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 16% 24%, rgba(29, 29, 27, 0.06) 0 1px, transparent 1.5px),
+        radial-gradient(circle at 78% 42%, rgba(29, 29, 27, 0.05) 0 1px, transparent 1.4px),
+        radial-gradient(circle at 42% 76%, rgba(29, 29, 27, 0.045) 0 1px, transparent 1.2px),
+        repeating-linear-gradient(0deg, rgba(29, 29, 27, 0.018) 0 1px, transparent 1px 8px);
+      background-size: 160px 160px, 190px 190px, 220px 220px, auto;
+      opacity: 0.88;
+    }
+
+    .frame::after {
+      content: "デザイナー視点で\A作るAI新知分享";
+      position: absolute;
+      right: clamp(22px, 3vw, 40px);
+      top: 42px;
+      bottom: 42px;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding-left: 18px;
+      border-left: 1px solid rgba(29, 29, 27, 0.34);
+      color: var(--ink);
+      font-family: var(--serif);
+      font-size: 13px;
+      letter-spacing: 0.14em;
+      line-height: 1.7;
+      writing-mode: vertical-rl;
+      white-space: pre;
+    }
+
+    .content {
+      position: relative;
+      z-index: 3;
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 16px;
+      padding: clamp(30px, 4.6vw, 62px) clamp(84px, 8.2vw, 126px) 30px clamp(108px, 9vw, 142px);
+      transform: scale(var(--fit-scale, 1));
+      transform-origin: top center;
+    }
+
+    .content::before {
+      display: none;
+    }
+
+    .content::after {
+      content: "シンプルでおいしいデザイン";
+      position: absolute;
+      left: clamp(42px, 5vw, 70px);
+      top: 205px;
+      color: var(--ink);
+      font-family: var(--serif);
+      font-size: 16px;
+      line-height: 2;
+      letter-spacing: 0.18em;
+      writing-mode: vertical-rl;
+    }
+
+    .topline,
+    .footer-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .topline {
+      padding-left: 0;
+    }
+
+    .footer-row {
+      padding-right: 190px;
+    }
+
+    .footer-row .hint:last-child {
+      display: none;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 0;
+      background: var(--ink);
+      flex: 0 0 auto;
+    }
+
+    .badge,
+    .pill,
+    .hint,
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      border: 1px solid rgba(29, 29, 27, 0.12);
+      background: rgba(251, 250, 246, 0.88);
+      color: var(--ink);
+    }
+
+    .badge {
+      padding: 8px 13px;
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      white-space: nowrap;
+    }
+
+    .hint {
+      padding: 8px 12px;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+      text-transform: none;
+    }
+
+    .pill,
+    .tag {
+      padding: 8px 12px;
+      color: var(--muted);
+      font-size: 13px;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin: 0;
+    }
+
+    h1,
+    h2,
+    h3,
+    .lead,
+    .big-quote {
+      line-break: strict;
+      word-break: normal;
+      text-wrap: balance;
+    }
+
+    h1 {
+      font-family: var(--serif);
+      font-size: clamp(36px, 4vw, 58px);
+      line-height: 1.18;
+      letter-spacing: 0.07em;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    h2 {
+      font-family: var(--serif);
+      font-size: clamp(27px, 3vw, 42px);
+      line-height: 1.38;
+      letter-spacing: 0.045em;
+      font-weight: 600;
+    }
+
+    h3 {
+      font-family: var(--serif);
+      font-size: clamp(17px, 1.38vw, 22px);
+      line-height: 1.45;
+      letter-spacing: 0.035em;
+      font-weight: 600;
+    }
+
+    p,
+    li {
+      color: var(--muted);
+      line-height: 1.78;
+      font-size: clamp(14px, 1.05vw, 16px);
+      letter-spacing: 0.018em;
+      line-break: strict;
+      word-break: normal;
+      text-wrap: pretty;
+    }
+
+    ul {
+      margin: 0;
+      padding-left: 1.18em;
+      display: grid;
+      gap: 7px;
+    }
+
+    .body {
+      min-height: 0;
+      display: grid;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .hero-grid {
+      grid-template-columns: minmax(0, 0.92fr) minmax(440px, 1.1fr);
+      gap: clamp(28px, 5vw, 70px);
+    }
+
+    .split {
+      grid-template-columns: minmax(280px, 0.72fr) minmax(0, 1.28fr);
+      gap: clamp(24px, 4.6vw, 62px);
+    }
+
+    .two-col {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .three-col {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .eyebrow {
+      color: var(--ink);
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      font-size: 12px;
+      margin-bottom: 12px;
+    }
+
+    .lead {
+      font-size: clamp(16px, 1.45vw, 21px);
+      line-height: 1.8;
+      max-width: 58ch;
+    }
+
+    .stack {
+      display: grid;
+      gap: 14px;
+    }
+
+    .card,
+    .image-card,
+    .quote-card,
+    .metric-card {
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(29, 29, 27, 0.12);
+      background:
+        linear-gradient(rgba(255, 255, 255, 0.68), rgba(255, 255, 255, 0.68)),
+        linear-gradient(var(--grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid) 1px, transparent 1px),
+        rgba(255, 255, 255, 0.62);
+      background-size: auto, 18px 18px, 18px 18px, auto;
+      overflow: hidden;
+    }
+
+    .card,
+    .quote-card,
+    .metric-card {
+      padding: 20px;
+    }
+
+    .card h3,
+    .quote-card h3,
+    .metric-card h3 {
+      margin-bottom: 8px;
+    }
+
+    .card strong {
+      color: var(--ink);
+    }
+
+    .image-card {
+      min-height: 0;
+      background: #fff;
+      box-shadow: none;
+      position: relative;
+    }
+
+    .image-link {
+      position: relative;
+      display: block;
+      min-width: 0;
+      color: inherit;
+      cursor: pointer;
+    }
+
+    .image-link::after {
+      content: "開啟對照網頁 ↗";
+      position: absolute;
+      right: 12px;
+      top: 12px;
+      z-index: 5;
+      padding: 7px 10px;
+      color: #fff;
+      background: rgba(29, 29, 27, 0.82);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      opacity: 0;
+      transform: translateY(-4px);
+      transition: opacity 180ms ease, transform 180ms ease;
+      pointer-events: none;
+    }
+
+    .image-link:hover::after,
+    .image-link:focus-visible::after {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .image-link .image-card {
+      transition: transform 220ms ease, border-color 220ms ease;
+    }
+
+    .image-link:hover .image-card,
+    .image-link:focus-visible .image-card {
+      transform: translateY(-3px);
+      border-color: rgba(29, 29, 27, 0.42);
+    }
+
+    .image-card::before,
+    .image-card::after {
+      content: "";
+      position: absolute;
+      width: 74px;
+      height: 22px;
+      z-index: 3;
+      background: rgba(223, 217, 200, 0.66);
+      transform: rotate(-8deg);
+      pointer-events: none;
+    }
+
+    .image-card::before {
+      left: 22px;
+      top: -8px;
+    }
+
+    .image-card::after {
+      right: 22px;
+      bottom: -8px;
+      transform: rotate(-8deg);
+    }
+
+    .image-card img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .image-card.contain img {
+      object-fit: contain;
+      background: #f9fbfb;
+    }
+
+    .caption {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 12px;
+      border-top: 1px solid rgba(29, 29, 27, 0.1);
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      background: rgba(255, 255, 255, 0.86);
+    }
+
+    .caption span {
+      min-width: 0;
+      line-height: 1.45;
+    }
+
+    .caption span:last-child {
+      text-align: right;
+    }
+
+    .image-card .shot {
+      height: clamp(210px, 24vw, 330px);
+    }
+
+    .hero-shots {
+      display: grid;
+      grid-template-columns: 0.95fr 1.05fr;
+      gap: 14px;
+      align-items: stretch;
+      min-height: 0;
+    }
+
+    .hero-shots>.image-link:first-child {
+      transform: translateY(26px);
+    }
+
+    .hero-shots .image-card .shot {
+      height: clamp(300px, 41vh, 470px);
+    }
+
+    .callout {
+      border-left: 0;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      padding: 16px 18px;
+      background: rgba(255, 255, 255, 0.45);
+      border-radius: 0;
+    }
+
+    .callout p {
+      color: var(--ink);
+      font-size: clamp(16px, 1.4vw, 21px);
+      line-height: 1.7;
+    }
+
+    .feature-list {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .feature {
+      padding: 18px;
+      border-radius: 0;
+      background:
+        linear-gradient(rgba(255, 255, 255, 0.74), rgba(255, 255, 255, 0.74)),
+        linear-gradient(var(--grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+      background-size: auto, 18px 18px, 18px 18px;
+      border: 1px solid rgba(29, 29, 27, 0.12);
+    }
+
+    .feature .num {
+      color: var(--muted);
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      margin-bottom: 10px;
+    }
+
+    .visual-flow {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 72px minmax(0, 1fr);
+      gap: 18px;
+      align-items: center;
+    }
+
+    .relation-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 92px minmax(0, 1fr);
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .identity-card {
+      display: grid;
+      align-content: start;
+      gap: 13px;
+      padding: 24px;
+      border: 1px solid rgba(29, 29, 27, 0.14);
+      background:
+        linear-gradient(rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.72)),
+        linear-gradient(var(--grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+      background-size: auto, 18px 18px, 18px 18px;
+    }
+
+    .identity-card .label {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    .identity-card .name {
+      font-family: var(--serif);
+      font-size: clamp(28px, 3vw, 42px);
+      line-height: 1.3;
+      letter-spacing: 0.04em;
+    }
+
+    .relation-bridge {
+      display: grid;
+      place-items: center;
+      align-content: center;
+      gap: 12px;
+      color: var(--muted);
+      text-align: center;
+      font-size: 11px;
+      line-height: 1.55;
+      letter-spacing: 0.08em;
+    }
+
+    .relation-bridge .arrow {
+      width: 50px;
+      height: 50px;
+      font-size: 22px;
+    }
+
+    .designer-value-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .designer-value {
+      padding: 14px 16px;
+      border-top: 1px solid var(--line);
+    }
+
+    .designer-value b {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--ink);
+      font-family: var(--serif);
+      font-size: 16px;
+      letter-spacing: 0.04em;
+    }
+
+    .designer-value span {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    .arrow {
+      width: 56px;
+      height: 56px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      justify-self: center;
+      color: #fff;
+      background: var(--ink);
+      font-size: 26px;
+    }
+
+    .prompt-box {
+      padding: 20px;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(29, 29, 27, 0.12);
+      background:
+        linear-gradient(rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 0.65)),
+        linear-gradient(var(--grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+      background-size: auto, 18px 18px, 18px 18px;
+      color: var(--muted);
+      line-height: 1.9;
+      font-size: clamp(14px, 1.05vw, 16px);
+    }
+
+    .model-strip {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .model-card {
+      border-radius: 0;
+      overflow: hidden;
+      background: #fff;
+      border: 1px solid rgba(29, 29, 27, 0.12);
+    }
+
+    .model-card img {
+      width: 100%;
+      height: clamp(120px, 15vh, 180px);
+      object-fit: cover;
+      display: block;
+    }
+
+    .model-card .meta {
+      padding: 12px;
+      display: grid;
+      gap: 5px;
+    }
+
+    .comparison-table-wrap {
+      overflow: hidden;
+      border: 1px solid rgba(29, 29, 27, 0.14);
+      background: rgba(255, 255, 255, 0.68);
+    }
+
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    .comparison-table th,
+    .comparison-table td {
+      padding: 13px 16px;
+      border-right: 1px solid rgba(29, 29, 27, 0.1);
+      border-bottom: 1px solid rgba(29, 29, 27, 0.1);
+      vertical-align: top;
+      text-align: left;
+      line-height: 1.6;
+    }
+
+    .comparison-table th:last-child,
+    .comparison-table td:last-child {
+      border-right: 0;
+    }
+
+    .comparison-table tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .comparison-table th {
+      color: var(--ink);
+      background: rgba(222, 215, 198, 0.42);
+      font-family: var(--serif);
+      font-size: 14px;
+      letter-spacing: 0.06em;
+    }
+
+    .comparison-table td {
+      color: var(--muted);
+      font-size: clamp(12px, 0.92vw, 14px);
+    }
+
+    .comparison-table td:first-child {
+      color: var(--ink);
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .comparison-table .fable-row td {
+      background: rgba(231, 201, 207, 0.18);
+    }
+
+    .meta b {
+      font-size: 14px;
+      color: var(--ink);
+    }
+
+    .meta span {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .metric-card {
+      min-height: 132px;
+    }
+
+    .metric-card .mark {
+      width: 34px;
+      height: 34px;
+      border-radius: 0;
+      display: grid;
+      place-items: center;
+      margin-bottom: 12px;
+      color: #fff;
+      font-weight: 700;
+      background: var(--ink);
+    }
+
+    .compare-layout {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .compare-main {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      min-height: 0;
+    }
+
+    .compare-main .image-card .shot {
+      height: clamp(260px, 38vh, 455px);
+    }
+
+    .insight-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .insight-list .card {
+      background:
+        linear-gradient(rgba(255, 255, 255, 0.74), rgba(255, 255, 255, 0.74)),
+        linear-gradient(var(--grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+      background-size: auto, 18px 18px, 18px 18px;
+    }
+
+    .experiment-grid {
+      display: grid;
+      grid-template-columns: 0.95fr 1.05fr;
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .experiment-slide .body,
+    .experiment-slide .stack {
+      gap: 9px;
+    }
+
+    .experiment-slide .lead {
+      font-size: clamp(14px, 1.2vw, 18px);
+      line-height: 1.58;
+    }
+
+    .experiment-slide .input-grid .image-card .shot {
+      height: clamp(165px, 21vh, 235px);
+    }
+
+    .experiment-slide .design-shot {
+      height: clamp(205px, 28vh, 310px) !important;
+    }
+
+    .experiment-slide .caption {
+      padding: 8px 10px;
+    }
+
+    .experiment-slide .link-card {
+      padding: 10px 14px;
+    }
+
+    .input-grid {
+      display: grid;
+      grid-template-columns: 0.92fr 1.08fr;
+      gap: 12px;
+    }
+
+    .input-grid .image-card .shot {
+      height: clamp(185px, 26vh, 300px);
+    }
+
+    .link-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .link-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 14px 16px;
+      border-radius: 0;
+      background: rgba(255, 255, 255, 0.76);
+      border: 1px solid rgba(29, 29, 27, 0.14);
+      color: var(--muted);
+      font-size: 14px;
+      transition: transform 180ms ease, border-color 180ms ease;
+    }
+
+    .link-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(29, 29, 27, 0.34);
+    }
+
+    .link-card b {
+      color: var(--ink);
+    }
+
+    .big-quote {
+      font-size: clamp(30px, 3.5vw, 50px);
+      font-family: var(--serif);
+      line-height: 1.42;
+      letter-spacing: 0.045em;
+      font-weight: 700;
+      max-width: 14ch;
+    }
+
+    .source-card {
+      display: block;
+      transition: transform 180ms ease, border-color 180ms ease;
+    }
+
+    .source-card:hover,
+    .source-card:focus-visible {
+      transform: translateY(-3px);
+      border-color: rgba(29, 29, 27, 0.38);
+    }
+
+    .conclusion-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+      gap: clamp(28px, 5vw, 68px);
+      align-items: center;
+    }
+
+    .closing-slide .body {
+      place-items: center;
+      text-align: center;
+    }
+
+    .closing-block {
+      display: grid;
+      justify-items: center;
+      gap: 20px;
+      max-width: 900px;
+    }
+
+    .closing-block h1 {
+      font-size: clamp(48px, 7vw, 92px);
+      white-space: normal;
+    }
+
+    .closing-rule {
+      width: 92px;
+      height: 1px;
+      background: var(--ink);
+    }
+
+    .closing-note {
+      max-width: 32em;
+      color: var(--muted);
+      font-family: var(--serif);
+      font-size: clamp(17px, 1.7vw, 23px);
+      line-height: 1.9;
+      letter-spacing: 0.04em;
+    }
+
+    .ui {
+      position: fixed;
+      right: 24px;
+      bottom: 20px;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .ctrl,
+    .counter {
+      border-radius: 999px;
+      border: 1px solid rgba(29, 29, 27, 0.18);
+      background: rgba(255, 255, 255, 0.92);
+      color: var(--muted);
+      font: inherit;
+      box-shadow: 0 14px 38px rgba(42, 38, 31, 0.08);
+    }
+
+    .ctrl {
+      cursor: pointer;
+      padding: 12px 15px;
+      color: #fff;
+      background: var(--ink);
+      border-color: var(--ink);
+      transition: transform 180ms ease, background 180ms ease;
+    }
+
+    .ctrl:hover {
+      transform: translateY(-1px);
+      background: #3a3935;
+    }
+
+    .counter {
+      min-width: 92px;
+      text-align: center;
+      padding: 12px 15px;
+    }
+
+    .progress {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 4px;
+      background: rgba(29, 29, 27, 0.08);
+      z-index: 30;
+    }
+
+    .progress span {
+      display: block;
+      height: 100%;
+      width: 0;
+      background: var(--ink);
+      transition: width 280ms ease;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .small {
+      font-size: 12px;
+      line-height: 1.55;
+      color: var(--soft);
+    }
+
+    @media (max-width: 1100px) {
+      .slide {
+        padding: 12px;
+      }
+
+      .frame {
+        width: calc(100vw - 24px);
+        height: calc(var(--app-height) - 24px);
+        border-radius: 18px;
+      }
+
+      .frame::after,
+      .content::after {
+        display: none;
+      }
+
+      .content {
+        gap: 10px;
+        padding: 24px 34px 22px 82px;
+      }
+
+      .content::before {
+        display: none;
+      }
+
+      .topline {
+        padding-left: 0;
+      }
+
+      .hero-grid {
+        grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.12fr);
+        gap: 24px;
+      }
+
+      .relation-grid {
+        grid-template-columns: minmax(0, 1fr) 68px minmax(0, 1fr);
+        gap: 12px;
+      }
+
+      .identity-card {
+        padding: 16px;
+      }
+
+      .designer-value-grid {
+        gap: 7px;
+      }
+
+      .split {
+        grid-template-columns: minmax(0, 0.78fr) minmax(0, 1.22fr);
+        gap: 24px;
+      }
+
+      .body,
+      .stack,
+      .feature-list,
+      .metric-grid,
+      .compare-layout,
+      .experiment-grid,
+      .conclusion-grid {
+        gap: 10px;
+      }
+
+      .card,
+      .quote-card,
+      .metric-card,
+      .feature,
+      .prompt-box {
+        padding: 14px;
+      }
+
+      .model-strip,
+      .link-list {
+        gap: 7px;
+      }
+
+      .model-card img {
+        height: clamp(92px, 13vh, 135px);
+      }
+
+      .model-card .meta,
+      .link-card {
+        padding: 9px 10px;
+      }
+
+      .comparison-table th,
+      .comparison-table td {
+        padding: 9px 10px;
+      }
+
+      .hero-shots .image-card .shot {
+        height: clamp(250px, 38vh, 390px);
+      }
+
+      .compare-main .image-card .shot {
+        height: clamp(220px, 34vh, 360px);
+      }
+    }
+
+    @media (max-width: 720px) {
+      .content {
+        padding: 18px;
+      }
+
+      .content::before,
+      .topline .badge {
+        display: none;
+      }
+
+      .topline {
+        padding-left: 0;
+      }
+
+      .footer-row {
+        font-size: 9px;
+        padding-right: 168px;
+      }
+
+      .ui {
+        right: 12px;
+        bottom: 10px;
+      }
+    }
+
+    @media print {
+
+      html,
+      body {
+        overflow: visible;
+        background: white;
+      }
+
+      .progress,
+      .ui {
+        display: none !important;
+      }
+
+      .footer-row {
+        padding-right: 0;
+      }
+
+      .deck,
+      .slides {
+        display: block;
+        height: auto;
+      }
+
+      .slide {
+        height: auto;
+        min-height: auto;
+        page-break-after: always;
+        break-after: page;
+        padding: 0;
+      }
+
+      .frame {
+        width: 100%;
+        height: auto;
+        min-height: 0;
+        box-shadow: none;
+        border-radius: 0;
+        border: none;
+      }
+
+      .content {
+        transform: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="progress" aria-hidden="true"><span id="progressBar"></span></div>
+  <main class="deck" id="deck">
+    <div class="slides" id="slides">
+      <section class="slide">
+        <div class="frame">
+          <div class="content">
+            <div class="topline">
+              <div class="brand"><span class="dot"></span><span>AI 新知分享</span></div>
+              <div class="badge">Fable 5 / Designer Test</div>
+            </div>
+            <div class="body hero-grid">
+              <div class="stack">
+                <div class="eyebrow">Design Research</div>
+                <h1>AI 新知分享</h1>
+                <p class="lead">
+                  從設計師角度看 Fable 5：<br>
+                  當 AI 開始能把參考網站、<br>粗 wireframe 與完整設計稿轉成<br> 可提案的高完成度頁面。
+                </p>
+                <!-- <div class="callout">
+                  <p>核心問題：同樣一個網頁設計 prompt，為什麼 Fable 5 更像可提案的設計初稿？</p>
+                </div> -->
+                <div class="stack" style="grid-template-columns: repeat(3, max-content); display: flex; flex-wrap: wrap;">
+                  <span class="pill">跨品類風格轉譯</span>
+                  <span class="pill">Wireframe 補完</span>
+                  <span class="pill">設計稿還原</span>
+                </div>
+              </div>
+              <div class="hero-shots">
+                <a class="image-link" href="https://www.kawai.jp/grandpianos/" target="_blank" rel="noopener" aria-label="開啟 Kawai Grand Pianos 參考網站">
+                  <figure class="image-card">
+                    <div class="shot"><img src="assets/kawai_web.png" alt="Kawai 鋼琴品牌參考網站截圖" /></div>
+                    <figcaption class="caption"><span>Reference</span><span>Kawai Grand Pianos ↗</span></figcaption>
+                  </figure>
+                </a>
+                <a class="image-link"
+                  href="file:///Users/u10a9023/Documents/claude_%E5%A0%B1%E5%91%8A/%E7%94%A8%E5%8F%83%E8%80%83%E7%B6%B2%E7%AB%99%E5%AF%AB%E7%B6%B2%E7%AB%99/fable_test2_%E8%87%AA%E5%B7%B1%E5%88%86%E6%9E%90%E8%AA%BF%E6%95%B4/yoin-fragrance-kawai-style%20(1).html"
+                  target="_blank" rel="noopener" aria-label="開啟 Fable 5 自己分析的生成結果">
+                  <figure class="image-card">
+                    <div class="shot"><img src="assets/fable_self_1.png" alt="Fable 自己分析生成的香水品牌網站截圖" /></div>
+                    <figcaption class="caption"><span>Output</span><span>Fable 5 self analysis ↗</span></figcaption>
+                  </figure>
+                </a>
+              </div>
+            </div>
+            <div class="footer-row">
+              <div class="hint">← → 切換投影片</div>
+              <div>Designer perspective / 15 slides</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide intro-slide">
+        <div class="frame">
+          <div class="content">
+            <div class="topline">
+              <div class="brand"><span class="dot"></span><span>01｜Claude AI 與 Fable 5</span></div>
+              <div class="badge">Platform and model</div>
+            </div>
+            <div class="body stack">
+              <div class="split">
+                <div>
+                  <div class="eyebrow">Before the experiment</div>
+                  <h2>Claude 與 Fable 5 </h2>
+                </div>
+                <p class="lead">
+                  這次實測使用的是 Claude Fable 5。<br>
+                  它延續 Claude 的對話、視覺、程式與工具使用能力，<br>但更強調長時間代理任務、複雜實作與自行驗證成果。
+                </p>
+              </div>
+
+              <div class="relation-grid">
+                <div class="identity-card">
+                  <div class="label">AI Platform / Model Family</div>
+                  <div class="name">Claude AI</div>
+                  <p>Anthropic 開發的 AI 平台與模型家族，可處理文字、圖片、程式碼、文件與工具操作。</p>
+                  <div class="stack" style="gap: 7px;">
+                    <span class="tag">Claude.ai</span>
+                    <span class="tag">Claude Code</span>
+                    <span class="tag">Claude API</span>
+                  </div>
+                </div>
+
+                <div class="relation-bridge" aria-label="Fable 5 屬於 Claude 模型家族">
+                  <span>模型家族中的<br />高階成員</span>
+                  <div class="arrow">→</div>
+                </div>
+
+                <a class="identity-card source-card" href="https://www.anthropic.com/claude/fable" target="_blank" rel="noopener">
+                  <div class="label">General-use Mythos-class model</div>
+
+                  <div class="name">Claude Fable 5</div>
+                  <p>Anthropic 面向一般使用者的高階模型，擅長長時間 agent、複雜程式開發、視覺理解與高還原度設計實作。</p>
+                  <div style="margin-top: 10px;"></div>
+                  <span class="tag">Anthropic 官方介紹 ↗</span>
+                </a>
+              </div>
+
+              <!-- <div class="designer-value-grid">
+                <div class="designer-value"><b>讀懂輸入</b><span>參考網站、截圖、wireframe 與完整設計稿。</span></div>
+                <div class="designer-value"><b>持續實作</b><span>從規劃、寫程式到互動與動態，不只回答一次。</span></div>
+                <div class="designer-value"><b>視覺驗證</b><span>能對照目標畫面檢查成果，讓設計意圖更接近成品。</span></div>
+              </div> -->
+            </div>
+            <div class="footer-row">
+              <!-- <div class="muted">對設計師而言，關鍵不只是模型會寫 code，而是它能否承接一段完整的設計任務。</div> -->
+              <div class="hint">頁 2 / 15</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide">
+        <div class="frame">
+          <div class="content">
+            <div class="topline">
+              <div class="brand"><span class="dot"></span><span>02｜模型特色</span></div>
+              <div class="badge">What makes Fable 5 different</div>
+            </div>
+            <div class="body split">
+              <div>
+                <div class="eyebrow">Model Feature</div>
+                <h2>Fable 5 <br>不只是生成工具，更像能承接<br>任務的協作者。</h2>
+                <p class="lead" style="margin-top: 16px;">
+                  對設計師來說，最關鍵的是它能讀參考、理解風格，<br>也能把完整設計稿轉成網頁。
+                </p>
+              </div>
+              <div class="feature-list">
+                <div class="feature">
+                  <div class="num">01 / Multimodal</div>
+                  <h3>多模態理解</h3>
+                  <p>能處理文字、圖片、截圖、wireframe 與參考網站。</p>
+                </div>
+                <div class="feature">
+                  <div class="num">02 / Wireframe</div>
+                  <h3>補完粗結構</h3>
+                  <p>把低保真結構補成接近 high fidelity 的可討論初稿。</p>
+                </div>
+                <div class="feature">
+                  <div class="num">03 / Style</div>
+                  <h3>風格轉譯</h3>
+                  <p>不是只抄色票，而是抓留白、字體氣質、圖片比例與節奏。</p>
+                </div>
+                <div class="feature">
+                  <div class="num">04 / Fidelity</div>
+                  <h3>設計稿還原</h3>
+                  <p>從完整設計稿生成網頁，測試比例、互動與動態還原程度。</p>
+                </div>
+              </div>
+            </div>
+            <div class="footer-row">
+              <div class="muted">設計師不一定要先畫到完整 UI，AI 可以先把方向推進到可討論畫面。</div>
+              <div class="hint">頁 3 / 15</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide research-map-slide">
+        <div class="frame">
+          <div class="content">
+            <div class="topline">
+              <div class="brand"><span class="dot"></span><span>03｜研究設計</span></div>
+              <div class="badge">Three design questions</div>
+            </div>
+            <div class="body stack">
+              <div class="split">
+                <div>
+                  <div class="eyebrow">Research map</div>
+
+                  <h2>這次研究，用三種實作問題測試 AI 的設計能力。</h2>
+                </div>
+                <div style="margin-top: 10px;"></div>
+                <p class="lead">不只比較畫面漂不漂亮，而是依序測試它能否理解氛圍、補完結構，以及把完整設計轉成可互動網頁。</p>
+              </div>
+
+              <div class="three-col">
+                <div class="card">
+                  <div class="eyebrow">Question 01</div>
+                  <h3>品牌氛圍能否跨品類轉譯？</h3>
+                  <p>使用相同 prompt 與 Kawai 參考網站，讓不同模型把鋼琴品牌的設計語言轉成香氛品牌。</p>
+                  <span class="tag" style="margin-top: 12px;">風格理解</span>
+                </div>
+                <div class="card">
+                  <div class="eyebrow">Question 02</div>
+                  <h3>粗 wireframe 能否補成完整頁面？</h3>
+                  <p>輸入低保真 wireframe、文字 prompt 與參考圖片，測試結構補完與視覺延伸能力。</p>
+                  <span class="tag" style="margin-top: 12px;">Wireframe 補完</span>
+                </div>
+                <div class="card">
+                  <div class="eyebrow">Question 03</div>
+                  <h3>完整設計稿能還原到什麼程度？</h3>
+                  <p>從完整醫療網站設計稿生成網頁，檢查比例、輪播、hover、圖表與動態效果。</p>
+                  <span class="tag" style="margin-top: 12px;">設計稿還原</span>
+                </div>
+              </div>
+
+              <div class="callout">
+                <p>三個問題對應設計流程：理解方向 → 補完畫面 → 驗證成品。</p>
+              </div>
+            </div>
+            <div class="footer-row">
+              <!-- <div class="muted">接下來先從最抽象、也最難量化的「品牌氛圍」開始。</div> -->
+              <!-- <div class="hint">頁 4 / 15</div> -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide">
+        <div class="frame">
+          <div class="content">
+            <div class="topline">
+              <div class="brand"><span class="dot"></span><span>04｜研究問題</span></div>
+              <div class="badge">Cross-domain style transfer</div>
+            </div>
+            <div class="body split">
+              <div class="stack">
+                <div>
+                  <div class="eyebrow">Experiment 01</div>
+                  <h2>品牌風格的氛圍，<br>
+                    能不能轉譯？</h2>
+                </div>
+                <p class="lead">
+                  我給 AI 的不是「做日系簡約」，而是一個 Kawai 鋼琴品牌網站。<br>
+                  任務是把它的設計性質轉成日本<br>文藝香氛品牌單頁網站。
+                </p>
+                <div class="prompt-box">
+                  用同一段 prompt，要求 AI 參考 Kawai 鋼琴網站的留白、垂直文字、圖片比例、排版節奏與慢動態，轉譯成日本文藝香氛品牌單頁網站。
+                </div>
+              </div>
+              <div class="visual-flow">
+                <a class="image-link" href="https://www.kawai.jp/grandpianos/" target="_blank" rel="noopener" aria-label="開啟 Kawai Grand Pianos 參考網站">
+                  <figure class="image-card">
+                    <div class="shot"><img src="assets/kawai_web.png" alt="Kawai 網站截圖" /></div>
+                    <figcaption class="caption"><span>Input</span><span>日式鋼琴品牌 ↗</span></figcaption>
+                  </figure>
+                </a>
+                <div class="arrow">→</div>
+                <a class="image-link"
+                  href="file:///Users/u10a9023/Documents/claude_%E5%A0%B1%E5%91%8A/%E7%94%A8%E5%8F%83%E8%80%83%E7%B6%B2%E7%AB%99%E5%AF%AB%E7%B6%B2%E7%AB%99/fable_test3_%E8%87%AA%E5%B7%B1%E5%88%86%E6%9E%90%E8%AA%BF%E6%95%B4/index.html"
+                  target="_blank" rel="noopener" aria-label="開啟 Fable 5 風格轉譯結果">
+                  <figure class="image-card">
+                    <div class="shot"><img src="assets/fable_self_2.png" alt="Fable 香水網站截圖" /></div>
+                    <figcaption class="caption"><span>Output</span><span>文藝香氛品牌 ↗</span></figcaption>
+                  </figure>
+                </a>
+              </div>
+            </div>
+            <div class="footer-row">
+              <!-- <div class="muted">測試重點：不是照抄內容，而是轉譯設計語言。</div> -->
+              <div class="hint">頁 5 / 15</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide criteria-slide">
+        <div class="frame">
+          <div class="content">
+            <div class="topline">
+              <div class="brand"><span class="dot"></span><span>05｜評估標準</span></div>
+              <div class="badge">Designer criteria</div>
+            </div>
+            <div class="body split">
+              <div>
+                <div class="eyebrow">How to judge</div>
+                <h2>網站不是資訊塞滿就好，<br>它很吃空氣感。</h2>
+                <p class="lead" style="margin-top: 16px;">
+                  這次評估不是看網頁有沒有完成，而是看它是否理解日系品牌網站的安靜、細膩與慢節奏。
+                </p>
+              </div>
+              <div class="metric-grid">
+                <div class="metric-card">
+                  <div class="mark">1</div>
+                  <h3>留白</h3>
+                  <p>是否乾淨成熟，而不是空洞。</p>
+                </div>
+                <div class="metric-card">
+                  <div class="mark">2</div>
+                  <h3>字體氣質</h3>
+                  <p>是否有日系文藝品牌的克制感。</p>
+                </div>
+                <div class="metric-card">
+                  <div class="mark">3</div>
+                  <h3>圖片比例</h3>
+                  <p>產品與背景是否有精品 catalog 感。</p>
+                </div>
+                <div class="metric-card">
+                  <div class="mark">4</div>
+                  <h3>排版節奏</h3>
+                  <p>區塊與文字是否有呼吸和停頓。</p>
+                </div>
+                <div class="metric-card">
+                  <div class="mark">5</div>
+                  <h3>動態效果</h3>
+                  <p>是否細膩自然，而不是為動而動。</p>
+                </div>
+                <div class="metric-card">
+                  <div class="mark">6</div>
+                  <h3>切換感</h3>
+                  <p>頁面是否延續參考網站的氛圍。</p>
+                </div>
+              </div>
+            </div>
+            <div class="footer-row">
+              <div class="muted">先定義判斷標準，再進入不同模型的比較。</div>
+              <div class="hint">頁 6 / 15</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide">
+        <div class="frame">
+          <div class="content">
+            <div class="topline">
+              <div class="brand"><span class="dot"></span><span>06｜比較對象</span></div>
+              <div class="badge">Same prompt, different workflows</div>
+            </div>
+            <div class="body">
+              <div class="split">
+                <div>
+                  <div class="eyebrow">Comparison</div>
+                  <h2>比較不同模型，也比較不同 Fable 工作流。</h2>
+                  <p class="lead" style="margin-top: 16px;">
+                    觀察輸入方式、分析方式與風格感受，如何影響最後畫面。
+                  </p>
+                  <div style="margin-top: 16px;"></div>
+                </div>
+                <div class="stack">
+                  <div class="card">
+                    <h3>比較模型</h3>
+                    <p>GPT 5.5 / 5.6、Claude Opus 4.6、Gemini 3.5 Flash、Fable 5。</p>
+                  </div>
+                  <div class="card">
+                    <h3>兩種 Fable 流程</h3>
+                    <p>Codex 先分析後給 Fable，對比 Fable 直接自己分析與調整。</p>
+                  </div>
+                </div>
+              </div>
+              <div class="model-strip">
+                <a class="model-card"
+                  href="file:///Users/u10a9023/Documents/claude_%E5%A0%B1%E5%91%8A/%E7%94%A8%E5%8F%83%E8%80%83%E7%B6%B2%E7%AB%99%E5%AF%AB%E7%B6%B2%E7%AB%99/codex_5.5_codex%E5%88%86%E6%9E%90/index.html"
+                  target="_blank" rel="noopener">
+                  <img src="assets/codex5_5.png" alt="Codex 5.5 結果截圖" />
+                  <div class="meta"><b>GPT 5.5</b><span>視覺張力強，但與參考網站的留白節奏不同。</span></div>
+                </a>
+                <a class="model-card"
+                  href="file:///Users/u10a9023/Documents/claude_%E5%A0%B1%E5%91%8A/%E7%94%A8%E5%8F%83%E8%80%83%E7%B6%B2%E7%AB%99%E5%AF%AB%E7%B6%B2%E7%AB%99/codex_5.6_%E5%88%86%E6%9E%90kawai-inspired/index.html"
+                  target="_blank" rel="noopener">
+                  <img src="assets/codex5_6.png" alt="Codex 5.6 結果截圖" />
+                  <div class="meta"><b>GPT 5.6</b><span>結構完整，但較像設計語彙整理後的模板。</span></div>
+                </a>
+                <a class="model-card"
+                  href="file:///Users/u10a9023/Documents/claude_%E5%A0%B1%E5%91%8A/%E7%94%A8%E5%8F%83%E8%80%83%E7%B6%B2%E7%AB%99%E5%AF%AB%E7%B6%B2%E7%AB%99/gemin_codex%E5%88%86%E6%9E%90/gemini-code-1783932642632.html"
+                  target="_blank" rel="noopener">
+                  <img src="assets/gemini.png" alt="Gemini 結果截圖" />
+                  <div class="meta"><b>Gemini</b><span>有留白與垂直文字，但節奏比較平面。</span></div>
+                </a>
+                <a class="model-card"
+                  href="file:///Users/u10a9023/Documents/claude_%E5%A0%B1%E5%91%8A/%E7%94%A8%E5%8F%83%E8%80%83%E7%B6%B2%E7%AB%99%E5%AF%AB%E7%B6%B2%E7%AB%99/opus4.6_codex%E5%88%86%E6%9E%90/shiori.html"
+                  target="_blank" rel="noopener">
+                  <img src="assets/opus4_6.png" alt="Claude Opus 4.6 結果截圖" />
+                  <div class="meta"><b>Opus 4.6</b><span>氣氛接近，但介面與資訊層級仍可整理。</span></div>
+                </a>
+                <a class="model-card"
+                  href="file:///Users/u10a9023/Documents/claude_%E5%A0%B1%E5%91%8A/%E7%94%A8%E5%8F%83%E8%80%83%E7%B6%B2%E7%AB%99%E5%AF%AB%E7%B6%B2%E7%AB%99/fable_test3_%E8%87%AA%E5%B7%B1%E5%88%86%E6%9E%90%E8%AA%BF%E6%95%B4/index.html"
+                  target="_blank" rel="noopener">
+                  <img src="assets/fable_self_2.png" alt="Fable 自己分析結果截圖" />
+                  <div class="meta"><b>Fable self</b><span>最能保留參考網站的氛圍與節奏感。</span></div>
+                </a>
+              </div>
+            </div>
+            <!-- <div class="footer-row">
+              <div class="muted">點擊模型卡片可打開對照網頁查看動態。</div>
+              <div class="hint">頁 7 / 15</div>
+            </div> -->
+          </div>
+        </div>
+      </section>
+
+      <section class="slide comparison-table-slide">
+        <div class="frame">
+          <div class="content">
+            <div class="topline">
+              <div class="brand"><span class="dot"></span><span>07｜模型優劣比較</span></div>
+              <div class="badge">Strengths and trade-offs</div>
+            </div>
+            <div class="body stack">
+              <div class="split">
+                <div>
+                  <div class="eyebrow">Comparison table</div>
+                  <h2>沒有誰全面勝出，差異在於設計取捨。</h2>
+                  <div style="margin-top: 16px;"></div>
+                </div>
+                <p class="lead">以下是這次相同提示詞實測後的主觀設計觀察，聚焦畫面氣質、結構完成度與風格轉譯。</p>
+              </div>
+
+              <div class="comparison-table-wrap">
+                <table class="comparison-table">
+                  <colgroup>
+                    <col style="width: 15%;" />
+                    <col style="width: 28%;" />
+                    <col style="width: 28%;" />
+                    <col style="width: 29%;" />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th>模型</th>
+                      <th>優勢</th>
+                      <th>相對限制</th>
+                      <th>設計觀察</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>GPT 5.5</td>
+                      <td>視覺張力強，首屏辨識度高。</td>
+                      <td>留白與節奏較偏自己的設計解法。</td>
+                      <td>適合快速提出有個性的視覺方向。</td>
+                    </tr>
+                    <tr>
+                      <td>GPT 5.6</td>
+                      <td>結構完整，資訊與元件安排清楚。</td>
+                      <td>畫面容易偏向理性、模板化。</td>
+                      <td>適合需要穩定架構與完整功能的頁面。</td>
+                    </tr>
+                    <tr>
+                      <td>Claude Opus 4.6</td>
+                      <td>氛圍接近參考，影像使用有感覺。</td>
+                      <td>部分資訊層級與介面細節仍需整理。</td>
+                      <td>有品牌情緒，但需要設計師收斂版面。</td>
+                    </tr>
+                    <tr>
+                      <td>Gemini 3.5 Flash</td>
+                      <td>能抓到留白、垂直文字等特徵。</td>
+                      <td>排版節奏與動態表現相對平面。</td>
+                      <td>風格元素到位，整體敘事感較弱。</td>
+                    </tr>
+                    <tr class="fable-row">
+                      <td>Fable 5</td>
+                      <td>字體、圖片比例、節奏與動態較完整。</td>
+                      <td>仍需設計師確認內容、可用性與品牌準確度。</td>
+                      <td>最接近可提案初稿，但不是不需修改的成品。</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="footer-row">
+              <div class="muted">表格是本次實驗觀察，不代表模型在所有網站任務中的絕對排名。</div>
+              <div class="hint">頁 8 / 15</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide">
+        <div class="frame">
+          <div class="content">
+            <div class="topline">
+              <div class="brand"><span class="dot"></span><span>08｜實測觀察</span></div>
+              <div class="badge">Where Fable wins</div>
+            </div>
+            <div class="body compare-layout">
+              <div class="compare-main">
+                <a class="image-link"
+                  href="file:///Users/u10a9023/Documents/claude_%E5%A0%B1%E5%91%8A/%E7%94%A8%E5%8F%83%E8%80%83%E7%B6%B2%E7%AB%99%E5%AF%AB%E7%B6%B2%E7%AB%99/fable_test_codex%E5%88%86%E6%9E%90/yoin-fragrance%20(3).html"
+                  target="_blank" rel="noopener" aria-label="開啟 Fable 搭配 Codex 分析的結果">
+                  <figure class="image-card">
+                    <div class="shot"><img src="assets/fable_codex_analysis.png" alt="Fable Codex 分析結果截圖" /></div>
+                    <figcaption class="caption"><span>Fable + Codex analysis</span><span>較理性 ↗</span></figcaption>
+                  </figure>
+                </a>
+                <a class="image-link"
+                  href="file:///Users/u10a9023/Documents/claude_%E5%A0%B1%E5%91%8A/%E7%94%A8%E5%8F%83%E8%80%83%E7%B6%B2%E7%AB%99%E5%AF%AB%E7%B6%B2%E7%AB%99/fable_test2_%E8%87%AA%E5%B7%B1%E5%88%86%E6%9E%90%E8%AA%BF%E6%95%B4/yoin-fragrance-kawai-style%20(1).html"
+                  target="_blank" rel="noopener" aria-label="開啟 Fable 自己分析的結果">
+                  <figure class="image-card">
+                    <div class="shot"><img src="assets/fable_self_1.png" alt="Fable 自己分析結果截圖" /></div>
+                    <figcaption class="caption"><span>Fable self analysis</span><span>較有氛圍 ↗</span></figcaption>
+                  </figure>
+                </a>
+              </div>
+              <div class="stack">
+                <div>
+                  <div class="eyebrow">Observation</div>
+                  <h2>Fable 5 的優勢，是整體節奏感。</h2>
+                </div>
+                <div class="insight-list">
+                  <div class="card">
+                    <h3>字體氣質</h3>
+                    <p>更能抓到日系簡約的安靜感。</p>
+                  </div>
+                  <div class="card">
+                    <h3>圖片比例</h3>
+                    <p>產品與留白比例更像品牌形象網站。</p>
+                  </div>
+                  <div class="card">
+                    <h3>排版節奏</h3>
+                    <p>區塊之間比較有呼吸感與停頓。</p>
+                  </div>
+                  <div class="card">
+                    <h3>動態效果</h3>
+                    <p>比較細膩，不只是有動畫而已。</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="footer-row">
+              <div class="muted">其他模型多半能完成結構，但比較容易停在「能用」。</div>
+              <div class="hint">頁 9 / 15</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide experiment-slide">
+        <div class="frame">
+          <div class="content">
+            <div class="topline">
+              <div class="brand"><span class="dot"></span><span>09｜實驗二</span></div>
+              <div class="badge">Wireframe and restoration</div>
+            </div>
+            <div class="body experiment-grid">
+              <div class="stack">
+                <div>
+                  <div class="eyebrow">Experiment 02-A</div>
+                  <h2>粗 wireframe 補完</h2>
+                  <p class="lead" style="margin-top: 12px;">
+                    輸入粗 wireframe、文字 prompt 與參考圖片，<br>測試 AI 是否能做出不同主題但同設計性質的網頁。 </p>
+                </div>
+                <div class="input-grid">
+                  <figure class="image-card contain">
+                    <div class="shot"><img src="assets/wireframe.png" alt="粗 wireframe 圖" /></div>
+                    <figcaption class="caption"><span>Wireframe</span><span>低保真結構</span></figcaption>
+                  </figure>
+                  <figure class="image-card contain">
+                    <div class="shot"><img src="assets/sokuyaku_ref.png" alt="參考圖片" /></div>
+                    <figcaption class="caption"><span>Reference</span><span>插畫 + 真人照片</span></figcaption>
+                  </figure>
+                </div>
+                <div class="link-list">
+                  <a class="link-card" href="https://haozu-rental-taiwan.u00hyweb.chatgpt.site/" target="_blank"><b>Codex 5.6</b><span>查看補完結果 →</span></a>
+                  <a class="link-card" href="file:///Users/u10a9023/Documents/claude_%E5%A0%B1%E5%91%8A/wireframe/gemin/gemini-code-1784098036875.html" target="_blank"><b>Gemini</b><span>查看補完結果
+                      →</span></a>
+                  <a class="link-card" href="file:///Users/u10a9023/Documents/claude_%E5%A0%B1%E5%91%8A/wireframe/fable/sumika-rental-v2.html" target="_blank"><b>Fable 5</b><span>查看補完結果 →</span></a>
+                </div>
+              </div>
+              <div class="stack">
+                <div>
+                  <div class="eyebrow">Experiment 02-B</div>
+                  <h2>完整設計稿還原</h2>
+                  <p class="lead" style="margin-top: 12px;">
+                    輸入完整醫療網站設計稿，測試版面比例、輪播、hover、chart 與動態細節的還原程度。
+                  </p>
+                </div>
+                <figure class="image-card contain">
+                  <div class="shot design-shot"><img src="assets/medical_design.jpg" alt="完整醫療網站設計稿" /></div>
+                  <figcaption class="caption"><span>Design file</span><span>完整設計稿</span></figcaption>
+                </figure>
+                <div class="link-list">
+                  <a class="link-card" href="https://green-river-medical-center.u00hyweb.chatgpt.site/" target="_blank"><b>Codex 5.6</b><span>查看還原結果 →</span></a>
+                  <a class="link-card" href="file:///Users/u10a9023/Documents/claude_%E5%A0%B1%E5%91%8A/%E7%94%A8%E5%9C%96%E6%AA%94%E9%82%84%E5%8E%9F%E7%A8%8B%E5%BA%A6/gemin/code_artifact.html"
+                    target="_blank"><b>Gemini</b><span>查看還原結果 →</span></a>
+                  <a class="link-card" href="file:///Users/u10a9023/Documents/claude_%E5%A0%B1%E5%91%8A/%E7%94%A8%E5%9C%96%E6%AA%94%E9%82%84%E5%8E%9F%E7%A8%8B%E5%BA%A6/fable/index%20(2).html"
+                    target="_blank"><b>Fable 5</b><span>查看還原結果 →</span></a>
+                </div>
+              </div>
+            </div>
+            <div class="footer-row">
+              <div class="muted">前者測補完能力，後者測還原能力。</div>
+              <div class="hint">頁 10 / 15</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide">
+        <div class="frame">
+          <div class="content">
+            <div class="topline">
+              <div class="brand"><span class="dot"></span><span>10｜工作流洞察</span></div>
+              <div class="badge">Feeling versus analysis</div>
+            </div>
+            <div class="body split">
+              <div>
+                <div class="eyebrow">Insight</div>
+                <h2>風格不能只被分析，也要被感受。</h2>
+                <p class="lead" style="margin-top: 16px;">
+                  Codex 先分析後再給 Fable，<br>結果比較理性。<br>Fable 自己分析與調整，<br> 反而比較能留下原網站氛圍。
+                </p>
+              </div>
+              <div class="stack">
+                <div class="quote-card">
+                  <div class="big-quote">設計不是規則集合</div>
+                  <p style="margin-top: 14px;">
+                    把參考網站拆成條列規則，有時會讓結果變得合理，但少了節奏、感覺和情緒。
+                  </p>
+                </div>
+                <div class="two-col">
+                  <div class="card">
+                    <h3>Codex 先分析</h3>
+                    <p>brief 更清楚，但可能把氛圍拆成過度理性的規則。</p>
+                  </div>
+                  <div class="card">
+                    <h3>Fable 自己感受</h3>
+                    <p>較能直接保留參考網站的空氣感、慢節奏與視覺取捨。</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="footer-row">
+              <div class="muted">設計 prompt 不只要清楚，也要保留風格感受。</div>
+              <div class="hint">頁 11 / 15</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide">
+        <div class="frame">
+          <div class="content">
+            <div class="topline">
+              <div class="brand"><span class="dot"></span><span>11｜延伸觀察</span></div>
+              <div class="badge">AI news context</div>
+            </div>
+            <div class="body split">
+              <div>
+                <div class="eyebrow">Context</div>
+                <h2>Fable 5 很強，<br>靈活運用也重要。</h2>
+                <p class="lead" style="margin-top: 16px;">
+                  這份分享不只看工具能力，也補兩個 AI 新知觀察：輸入方式如何被設計，以及模型服務如何成為流程風險。
+                </p>
+              </div>
+              <div class="two-col">
+                <a class="card source-card" href="https://cyberq.tw/2026/07/04/a-new-fable-5-token-saving-trick-is/" target="_blank" rel="noopener">
+                  <span class="tag">CyberQ</span>
+                  <h3 style="margin-top: 12px;">Prompt 也可以被設計</h3>
+                  <p>社群把長 prompt 轉成圖片，讓模型透過 OCR 讀取。重點不只在節省 token，而是 Prompt Engineering 正在走向 Input Engineering。↗</p>
+                </a>
+                <a class="card source-card" href="https://www.bnext.com.tw/article/91289/fable-5-ban-ai-supply-chain-risk" target="_blank" rel="noopener">
+                  <span class="tag">BusinessNext</span>
+                  <h3 style="margin-top: 12px;">AI 模型也是供應鏈風險</h3>
+                  <p>模型再強，也可能因政策或服務因素中斷。
+                    <br>導入 AI 工作流時，需要保留備援與可移轉性。↗
+                  </p>
+                </a>
+              </div>
+            </div>
+            <div class="footer-row">
+              <div class="muted">能力越強，越需要思考輸入設計與流程管理。</div>
+              <div class="hint">頁 12 / 15</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide">
+        <div class="frame">
+          <div class="content">
+            <div class="topline">
+              <div class="brand"><span class="dot"></span><span>12｜設計師角色</span></div>
+              <div class="badge">Designer takeaway</div>
+            </div>
+            <div class="body split">
+              <div class="quote-card">
+                <div class="eyebrow">Designer role</div>
+                <div class="big-quote" style="max-width: 12ch;">Fable 5 放大的不是手速，而是判斷力。</div>
+                <p style="margin-top: 18px;">
+                  它在跨品類風格轉譯、wireframe 補完與設計稿還原上都值得觀察，但最後仍需要設計師判斷什麼才算好。
+                </p>
+              </div>
+              <div class="stack">
+                <div class="card">
+                  <h3>這次測試裡，Fable 5 有明顯優勢</h3>
+                  <p>它更能抓到字體氣質、圖片比例、排版節奏與動態效果。但其他選手表現也不差。</p>
+                </div>
+                <div class="card">
+                  <h3>但重點不是誰贏</h3>
+                  <p>真正重要的是 AI 工作流正在改變，設計師會更常定義方向、設計輸入與判斷品質。</p>
+                </div>
+                <div class="card">
+                  <h3>設計師的新角色</h3>
+                  <p>不是把每個畫面從零畫完，而是知道什麼值得做、什麼才算好、<br>什麼不能完全交給工具決定。</p>
+                </div>
+              </div>
+            </div>
+            <div class="footer-row">
+              <div class="muted">AI 讓執行更快，也讓設計判斷變得更重要。</div>
+              <div class="hint">頁 13 / 15</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide conclusion-slide">
+        <div class="frame">
+          <div class="content">
+            <div class="topline">
+              <div class="brand"><span class="dot"></span><span>13｜結論</span></div>
+              <div class="badge">Conclusion</div>
+            </div>
+            <div class="body conclusion-grid">
+              <div class="quote-card">
+                <div class="eyebrow">Final takeaway</div>
+                <div class="big-quote" style="max-width: 13ch;">AI 把設計判斷更快變成可驗證的畫面。</div>
+              </div>
+              <div class="stack">
+                <div class="card">
+                  <h3>它更接近設計協作者</h3>
+                  <p>不只生成程式碼，也能理解參考、補完結構、處理互動，並持續把任務推進。</p>
+                </div>
+                <div class="card">
+                  <h3>最明顯的優勢是整體感</h3>
+                  <p>在這次實測中，字體氣質、圖片比例、排版節奏與動態效果的整合較完整。</p>
+                </div>
+                <div class="card">
+                  <h3>但工具選擇仍要看任務</h3>
+                  <p>其他模型表現也不差。設計師需要依結構、速度、風格與風險，靈活選擇工作流。</p>
+                </div>
+                <div class="callout">
+                  <p>AI 放大執行力；設計師負責方向、取捨與品質。</p>
+                </div>
+              </div>
+            </div>
+            <div class="footer-row">
+              <div class="muted">從 prompt 到網頁，真正被放大的仍是設計判斷。</div>
+              <div class="hint">頁 14 / 15</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide closing-slide">
+        <div class="frame">
+          <div class="content">
+            <div class="topline">
+              <div class="brand"><span class="dot"></span><span>AI 新知分享</span></div>
+              <div class="badge">Thank you</div>
+            </div>
+            <div class="body">
+              <div class="closing-block">
+                <div class="eyebrow">End of presentation</div>
+                <h1>謝謝聆聽</h1>
+                <div class="closing-rule"></div>
+                <p class="closing-note">從設計師角度，看 Fable 5 如何把設計意圖轉成可討論、可操作的網頁。</p>
+                <div class="stack" style="display: flex; flex-wrap: wrap; justify-content: center;">
+                  <span class="pill">風格轉譯</span>
+                  <span class="pill">Wireframe 補完</span>
+                  <span class="pill">設計稿還原</span>
+                </div>
+              </div>
+            </div>
+            <div class="footer-row">
+              <div class="muted">AI 新知分享 / Fable 5 Designer Test</div>
+              <div class="hint">頁 15 / 15</div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <div class="ui">
+    <button class="ctrl" id="prevBtn" aria-label="上一頁">←</button>
+    <div class="counter" id="counter">1 / 15</div>
+    <button class="ctrl" id="nextBtn" aria-label="下一頁">→</button>
+  </div>
+
+  <script>
+    (() => {
+      const slides = Array.from(document.querySelectorAll(".slide"));
+      const slidesWrap = document.getElementById("slides");
+      const progressBar = document.getElementById("progressBar");
+      const counter = document.getElementById("counter");
+      const prevBtn = document.getElementById("prevBtn");
+      const nextBtn = document.getElementById("nextBtn");
+      let index = 0;
+      let fitTimer = null;
+
+      const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+
+      const setAppHeight = () => {
+        document.documentElement.style.setProperty("--app-height", `${window.innerHeight}px`);
+      };
+
+      const fitSlides = () => {
+        slides.forEach((slide) => {
+          const frame = slide.querySelector(".frame");
+          const content = slide.querySelector(".content");
+          if (!frame || !content) return;
+
+          content.style.setProperty("--fit-scale", "1");
+          const frameHeight = frame.clientHeight;
+          const frameWidth = frame.clientWidth;
+          const contentHeight = content.scrollHeight;
+          const contentWidth = content.scrollWidth;
+          const heightScale = frameHeight && contentHeight ? (frameHeight - 6) / contentHeight : 1;
+          const widthScale = frameWidth && contentWidth ? (frameWidth - 6) / contentWidth : 1;
+          const scale = Math.min(1, heightScale, widthScale);
+          content.style.setProperty("--fit-scale", scale.toFixed(4));
+        });
+      };
+
+      const render = () => {
+        const total = slides.length;
+        index = clamp(index, 0, total - 1);
+        slidesWrap.style.transform = `translateX(${-index * 100}vw)`;
+        progressBar.style.width = `${((index + 1) / total) * 100}%`;
+        counter.textContent = `${index + 1} / ${total}`;
+        history.replaceState(null, "", `#${index + 1}`);
+        window.requestAnimationFrame(fitSlides);
+      };
+
+      const goTo = (next) => {
+        index = clamp(next, 0, slides.length - 1);
+        render();
+      };
+
+      const readHash = () => {
+        const n = Number(location.hash.replace("#", ""));
+        if (Number.isFinite(n) && n >= 1 && n <= slides.length) index = n - 1;
+      };
+
+      prevBtn.addEventListener("click", () => goTo(index - 1));
+      nextBtn.addEventListener("click", () => goTo(index + 1));
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "ArrowRight" || event.key === "PageDown" || event.key === " ") {
+          event.preventDefault();
+          goTo(index + 1);
+        }
+        if (event.key === "ArrowLeft" || event.key === "PageUp") {
+          event.preventDefault();
+          goTo(index - 1);
+        }
+        if (event.key === "Home") {
+          event.preventDefault();
+          goTo(0);
+        }
+        if (event.key === "End") {
+          event.preventDefault();
+          goTo(slides.length - 1);
+        }
+      });
+
+      window.addEventListener("hashchange", () => {
+        readHash();
+        render();
+      });
+
+      window.addEventListener("resize", () => {
+        setAppHeight();
+        clearTimeout(fitTimer);
+        fitTimer = window.setTimeout(fitSlides, 80);
+      });
+
+      setAppHeight();
+      readHash();
+      render();
+      fitSlides();
+      if (document.fonts?.ready) document.fonts.ready.then(fitSlides);
+    })();
+  </script>
+</body>
+
+</html>
